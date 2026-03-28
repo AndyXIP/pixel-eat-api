@@ -1,6 +1,6 @@
 from fastapi import UploadFile
-from app.database import supabase
-from app.config import settings
+from database import supabase
+from config import settings
 import uuid
 
 

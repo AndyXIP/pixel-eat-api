@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from datetime import date
-from app.dependencies import get_current_user
-from app.database import supabase
+from dependencies import get_current_user
+from database import supabase
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 

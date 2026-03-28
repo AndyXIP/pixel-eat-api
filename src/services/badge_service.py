@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List
-from app.database import supabase
+from database import supabase
 import uuid
 
 

@@ -3,9 +3,9 @@ from typing import List, Optional
 import json
 import uuid
 
-from app.dependencies import get_current_user
-from app.services import post_service
-from app.database import supabase
+from dependencies import get_current_user
+from services import post_service
+from database import supabase
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -20,7 +20,7 @@ async def create_post(
     photo: UploadFile = File(...),
     user: dict = Depends(get_current_user),
 ):
-    from app.schemas.post import PostCreate
+    from schemas.post import PostCreate
     try:
         parsed_ids = [uuid.UUID(i) for i in json.loads(ingredient_ids)]
     except (ValueError, json.JSONDecodeError):

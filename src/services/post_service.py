@@ -1,9 +1,9 @@
 from fastapi import HTTPException, UploadFile, status
 from datetime import datetime, timedelta
 from typing import List
-from app.database import supabase
-from app.schemas.post import PostCreate, PostResponse
-from app.services import storage_service, badge_service
+from database import supabase
+from schemas.post import PostCreate, PostResponse
+from services import storage_service, badge_service
 import uuid
 
 VALID_VESSEL_TYPES = {"bowl", "plate", "box", "wrap", "cup", "other"}
