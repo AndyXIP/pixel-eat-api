@@ -78,9 +78,7 @@ async def get_feed(user: dict = Depends(get_current_user)):
         .eq("follower_id", user["id"])
         .execute()
     )
-    following_ids = [f["following_id"] for f in follows.data]
-    if not following_ids:
-        return []
+    following_ids = [f["following_id"] for f in follows.data] + [user["id"]]
 
     result = (
         supabase.table("posts")
