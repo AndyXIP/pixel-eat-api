@@ -7,6 +7,8 @@ from datetime import datetime, timezone, timedelta
 router = APIRouter(prefix="/diary", tags=["diary"])
 
 
+MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
 def _ordinal(n: int) -> str:
     if 11 <= n % 100 <= 13:
         return f"{n}th"
@@ -35,6 +37,36 @@ def _day_streak(posts_data: list) -> int:
         streak += 1
         current -= timedelta(days=1)
     return streak
+
+
+@router.get("/dishes")
+async def get_dish_history(user: dict = Depends(get_current_user)):
+    """All dishes the user has cooked, newest first, with full date strings."""
+    result = (
+        supabase.table("posts")
+        .select("id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))")
+        .eq("user_id", user["id"])
+        .order("posted_at", desc=True)
+        .execute()
+    )
+    dishes = []
+    for p in result.data:
+        dt = _parse_dt(p["posted_at"])
+        ingredient_names = [
+            pi["ingredients"]["name"]
+            for pi in (p.get("post_ingredients") or [])
+            if pi.get("ingredients")
+        ]
+        dishes.append({
+            "id": p["id"],
+            "date": f"{MONTH_NAMES[dt.month - 1]} {_ordinal(dt.day)}, {dt.year}",
+            "photoUrl": p["photo_url"],
+            "name": p.get("caption") or p["vessel_type"],
+            "cuisine": None,
+            "ingredients": ingredient_names,
+            "recipe": None,
+        })
+    return dishes
 
 
 @router.get("")

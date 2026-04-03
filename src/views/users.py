@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from dependencies import get_current_user
 from schemas.user import UserUpdate
+from services.storage_service import upload_post_photo
 from database import supabase
 import uuid
 
@@ -28,6 +29,13 @@ async def get_user(user_id: uuid.UUID, user: dict = Depends(get_current_user)):
     ).count or 0
 
     return {**result.data, "post_count": post_count, "badge_count": badge_count}
+
+
+@router.post("/me/avatar")
+async def upload_avatar(photo: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    url = await upload_post_photo(photo, user["id"])
+    result = supabase.table("users").update({"avatar_url": url}).eq("id", user["id"]).execute()
+    return {"avatarUrl": url}
 
 
 @router.put("/me")
