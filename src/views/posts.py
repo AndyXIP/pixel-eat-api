@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from typing import List, Optional
+from datetime import datetime, timedelta
 import json
 import uuid
 
 from dependencies import get_current_user
 from services import post_service
 from database import supabase
+from config import settings
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -34,6 +36,35 @@ async def create_post(
         ingredient_ids=parsed_ids,
     )
     return await post_service.create_post(post_data, photo, user)
+
+
+# Map frontend vessel names to valid DB vessel types
+_VESSEL_MAP = {
+    "bowl": "bowl", "plate": "plate", "wrap": "wrap",
+    "mug": "cup",   "soup": "bowl",   "pan": "other",
+    "sandwich": "other", "pizza": "other",
+}
+
+
+@router.post("/quick", status_code=status.HTTP_201_CREATED)
+async def create_quick_post(data: dict, user: dict = Depends(get_current_user)):
+    from schemas.post import QuickPostCreate
+    body = QuickPostCreate(**data)
+    now = datetime.utcnow()
+    post_id = str(uuid.uuid4())
+    post_row = {
+        "id":            post_id,
+        "user_id":       user["id"],
+        "photo_url":     f"{settings.base_url}/images/mockimages/1.png",
+        "vessel_type":   _VESSEL_MAP.get(body.vessel_type, "other"),
+        "is_hot":        body.is_hot,
+        "caption":       body.caption,
+        "posted_at":     now.isoformat(),
+        "expires_at":    (now + timedelta(days=30)).isoformat(),
+        "late_post_mins": 0,
+    }
+    result = supabase.table("posts").insert(post_row).execute()
+    return result.data[0] if result.data else post_row
 
 
 @router.get("/{post_id}")

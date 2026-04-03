@@ -28,6 +28,13 @@ class PostResponse(BaseModel):
     late_post_mins: int
 
 
+class QuickPostCreate(BaseModel):
+    vessel_type: str
+    is_hot: bool
+    caption: Optional[str] = None
+    toppings: List[str] = []
+
+
 class FeedPost(PostResponse):
     user_username: str
     user_display_name: str
