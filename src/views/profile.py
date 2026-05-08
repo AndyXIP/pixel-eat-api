@@ -48,7 +48,9 @@ async def get_my_profile(user: dict = Depends(get_current_user)):
 
     posts_result = (
         supabase.table("posts")
-        .select("id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))")
+        .select(
+            "id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))"
+        )
         .eq("user_id", user["id"])
         .order("posted_at", desc=True)
         .execute()
@@ -56,24 +58,18 @@ async def get_my_profile(user: dict = Depends(get_current_user)):
     posts_data = posts_result.data
 
     recipes_result = (
-        supabase.table("recipes")
-        .select("id")
-        .eq("user_id", user["id"])
-        .execute()
+        supabase.table("recipes").select("id").eq("user_id", user["id"]).execute()
     )
     recipes_count = len(recipes_result.data)
 
     badges_result = (
-        supabase.table("user_badges")
-        .select("id")
-        .eq("user_id", user["id"])
-        .execute()
+        supabase.table("user_badges").select("id").eq("user_id", user["id"]).execute()
     )
     badges_count = len(badges_result.data)
 
     ingredient_counter: Counter = Counter()
     for p in posts_data:
-        for pi in (p.get("post_ingredients") or []):
+        for pi in p.get("post_ingredients") or []:
             if pi.get("ingredients"):
                 ingredient_counter[pi["ingredients"]["name"]] += 1
     total_uses = sum(ingredient_counter.values()) or 1
@@ -89,15 +85,17 @@ async def get_my_profile(user: dict = Depends(get_current_user)):
             for pi in (p.get("post_ingredients") or [])
             if pi.get("ingredients")
         ]
-        pinned.append({
-            "id": p["id"],
-            "bg": "#8B6F47",
-            "imageUrl": p["photo_url"],
-            "name": p.get("caption") or p["vessel_type"],
-            "cuisine": None,
-            "ingredients": ingredient_names,
-            "recipe": None,
-        })
+        pinned.append(
+            {
+                "id": p["id"],
+                "bg": "#8B6F47",
+                "imageUrl": p["photo_url"],
+                "name": p.get("caption") or p["vessel_type"],
+                "cuisine": None,
+                "ingredients": ingredient_names,
+                "recipe": None,
+            }
+        )
 
     return {
         "displayName": profile.get("display_name", ""),

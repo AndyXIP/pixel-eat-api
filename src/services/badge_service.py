@@ -25,7 +25,9 @@ async def _check_seasonal_badges(user_id: str, post_id: uuid.UUID) -> List[dict]
     # Get ingredients on this post that are seasonal and currently available
     result = (
         supabase.table("post_ingredients")
-        .select("ingredient_id, ingredients(id, season, available_from, available_until, tier)")
+        .select(
+            "ingredient_id, ingredients(id, season, available_from, available_until, tier)"
+        )
         .eq("post_id", str(post_id))
         .execute()
     )
@@ -38,7 +40,11 @@ async def _check_seasonal_badges(user_id: str, post_id: uuid.UUID) -> List[dict]
         available_from = ing.get("available_from")
         available_until = ing.get("available_until")
         if available_from and available_until:
-            if date.fromisoformat(available_from) <= today <= date.fromisoformat(available_until):
+            if (
+                date.fromisoformat(available_from)
+                <= today
+                <= date.fromisoformat(available_until)
+            ):
                 seasonal_ingredient_ids.add(ing["id"])
 
     if not seasonal_ingredient_ids:
@@ -46,10 +52,7 @@ async def _check_seasonal_badges(user_id: str, post_id: uuid.UUID) -> List[dict]
 
     # Find seasonal badges whose condition_value matches these ingredients
     badges_result = (
-        supabase.table("badges")
-        .select("*")
-        .eq("condition_type", "seasonal")
-        .execute()
+        supabase.table("badges").select("*").eq("condition_type", "seasonal").execute()
     )
 
     already_earned = _get_already_earned_badge_ids(user_id)
@@ -80,10 +83,7 @@ async def _check_streak_badges(user_id: str, post_id: uuid.UUID) -> List[dict]:
     streak = _calculate_streak(posts_result.data)
 
     badges_result = (
-        supabase.table("badges")
-        .select("*")
-        .eq("condition_type", "streak")
-        .execute()
+        supabase.table("badges").select("*").eq("condition_type", "streak").execute()
     )
 
     already_earned = _get_already_earned_badge_ids(user_id)

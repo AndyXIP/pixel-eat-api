@@ -82,7 +82,9 @@ async def get_feed(user: dict = Depends(get_current_user)):
 
     result = (
         supabase.table("posts")
-        .select("*, users(display_name, username, avatar_url), post_ingredients(ingredient_id, ingredients(name))")
+        .select(
+            "*, users(display_name, username, avatar_url), post_ingredients(ingredient_id, ingredients(name))"
+        )
         .in_("user_id", following_ids)
         .order("posted_at", desc=True)
         .limit(50)

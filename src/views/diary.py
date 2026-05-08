@@ -7,7 +7,21 @@ from datetime import datetime, timezone, timedelta
 router = APIRouter(prefix="/diary", tags=["diary"])
 
 
-MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+MONTH_NAMES = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+
 
 def _ordinal(n: int) -> str:
     if 11 <= n % 100 <= 13:
@@ -44,7 +58,9 @@ async def get_dish_history(user: dict = Depends(get_current_user)):
     """All dishes the user has cooked, newest first, with full date strings."""
     result = (
         supabase.table("posts")
-        .select("id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))")
+        .select(
+            "id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))"
+        )
         .eq("user_id", user["id"])
         .order("posted_at", desc=True)
         .execute()
@@ -57,15 +73,17 @@ async def get_dish_history(user: dict = Depends(get_current_user)):
             for pi in (p.get("post_ingredients") or [])
             if pi.get("ingredients")
         ]
-        dishes.append({
-            "id": p["id"],
-            "date": f"{MONTH_NAMES[dt.month - 1]} {_ordinal(dt.day)}, {dt.year}",
-            "photoUrl": p["photo_url"],
-            "name": p.get("caption") or p["vessel_type"],
-            "cuisine": None,
-            "ingredients": ingredient_names,
-            "recipe": None,
-        })
+        dishes.append(
+            {
+                "id": p["id"],
+                "date": f"{MONTH_NAMES[dt.month - 1]} {_ordinal(dt.day)}, {dt.year}",
+                "photoUrl": p["photo_url"],
+                "name": p.get("caption") or p["vessel_type"],
+                "cuisine": None,
+                "ingredients": ingredient_names,
+                "recipe": None,
+            }
+        )
     return dishes
 
 
@@ -80,7 +98,9 @@ async def get_diary(user: dict = Depends(get_current_user)):
     # All user posts (for streak + total stats)
     all_posts_result = (
         supabase.table("posts")
-        .select("id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))")
+        .select(
+            "id, photo_url, vessel_type, caption, posted_at, post_ingredients(ingredient_id, ingredients(name))"
+        )
         .eq("user_id", user["id"])
         .order("posted_at", desc=True)
         .execute()
@@ -89,7 +109,12 @@ async def get_diary(user: dict = Depends(get_current_user)):
 
     # Filter to this month (ascending for calendar)
     month_posts = sorted(
-        [p for p in all_posts if _parse_dt(p["posted_at"]).year == year and _parse_dt(p["posted_at"]).month == month],
+        [
+            p
+            for p in all_posts
+            if _parse_dt(p["posted_at"]).year == year
+            and _parse_dt(p["posted_at"]).month == month
+        ],
         key=lambda p: p["posted_at"],
     )
 
@@ -100,7 +125,9 @@ async def get_diary(user: dict = Depends(get_current_user)):
         day = _parse_dt(p["posted_at"]).day
         if day not in seen_days:
             seen_days.add(day)
-            logged_days.append({"day": day, "photoUrl": p["photo_url"], "caption": p.get("caption")})
+            logged_days.append(
+                {"day": day, "photoUrl": p["photo_url"], "caption": p.get("caption")}
+            )
 
     # dishesThisWeek: posts in the last 7 days, padded to 6 slots
     week_ago = now - timedelta(days=7)
@@ -112,25 +139,29 @@ async def get_diary(user: dict = Depends(get_current_user)):
             for pi in (p.get("post_ingredients") or [])
             if pi.get("ingredients")
         ]
-        dishes_this_week.append({
-            "id": p["id"],
-            "bg": "#8B6F47",
-            "imageUrl": p["photo_url"],
-            "name": p.get("caption") or p["vessel_type"],
-            "cuisine": None,
-            "ingredients": ingredient_names,
-            "recipe": None,
-        })
+        dishes_this_week.append(
+            {
+                "id": p["id"],
+                "bg": "#8B6F47",
+                "imageUrl": p["photo_url"],
+                "name": p.get("caption") or p["vessel_type"],
+                "cuisine": None,
+                "ingredients": ingredient_names,
+                "recipe": None,
+            }
+        )
     while len(dishes_this_week) < 6:
-        dishes_this_week.append({
-            "id": f"empty-{len(dishes_this_week)}",
-            "bg": "#E8E4E0",
-            "imageUrl": None,
-            "name": None,
-            "cuisine": None,
-            "ingredients": [],
-            "recipe": None,
-        })
+        dishes_this_week.append(
+            {
+                "id": f"empty-{len(dishes_this_week)}",
+                "bg": "#E8E4E0",
+                "imageUrl": None,
+                "name": None,
+                "cuisine": None,
+                "ingredients": [],
+                "recipe": None,
+            }
+        )
 
     # Recipes stats
     all_recipes_result = (
@@ -141,14 +172,15 @@ async def get_diary(user: dict = Depends(get_current_user)):
     )
     all_recipes = all_recipes_result.data
     new_recipes_count = sum(
-        1 for r in all_recipes
-        if month_start <= _parse_dt(r["created_at"]) <= month_end
+        1 for r in all_recipes if month_start <= _parse_dt(r["created_at"]) <= month_end
     )
 
     # Active event for challenge data
     event_result = (
         supabase.table("events")
-        .select("title, description, event_ingredients(label, image_key), event_featured_recipes(recipe_name)")
+        .select(
+            "title, description, event_ingredients(label, image_key), event_featured_recipes(recipe_name)"
+        )
         .lte("starts_at", now.isoformat())
         .gte("ends_at", now.isoformat())
         .limit(1)
@@ -167,8 +199,7 @@ async def get_diary(user: dict = Depends(get_current_user)):
                 for ei in (event.get("event_ingredients") or [])
             ],
             "featuredRecipes": [
-                er["recipe_name"]
-                for er in (event.get("event_featured_recipes") or [])
+                er["recipe_name"] for er in (event.get("event_featured_recipes") or [])
             ],
         }
 

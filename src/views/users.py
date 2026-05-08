@@ -12,7 +12,9 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def get_user(user_id: uuid.UUID, user: dict = Depends(get_current_user)):
     result = (
         supabase.table("users")
-        .select("id, username, display_name, avatar_url, notification_pref, notification_time")
+        .select(
+            "id, username, display_name, avatar_url, notification_pref, notification_time"
+        )
         .eq("id", str(user_id))
         .single()
         .execute()
@@ -21,20 +23,33 @@ async def get_user(user_id: uuid.UUID, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
 
     post_count = (
-        supabase.table("posts").select("id", count="exact").eq("user_id", str(user_id)).execute()
+        supabase.table("posts")
+        .select("id", count="exact")
+        .eq("user_id", str(user_id))
+        .execute()
     ).count or 0
 
     badge_count = (
-        supabase.table("user_badges").select("id", count="exact").eq("user_id", str(user_id)).execute()
+        supabase.table("user_badges")
+        .select("id", count="exact")
+        .eq("user_id", str(user_id))
+        .execute()
     ).count or 0
 
     return {**result.data, "post_count": post_count, "badge_count": badge_count}
 
 
 @router.post("/me/avatar")
-async def upload_avatar(photo: UploadFile = File(...), user: dict = Depends(get_current_user)):
+async def upload_avatar(
+    photo: UploadFile = File(...), user: dict = Depends(get_current_user)
+):
     url = await upload_post_photo(photo, user["id"])
-    result = supabase.table("users").update({"avatar_url": url}).eq("id", user["id"]).execute()
+    _result = (
+        supabase.table("users")
+        .update({"avatar_url": url})
+        .eq("id", user["id"])
+        .execute()
+    )
     return {"avatarUrl": url}
 
 
@@ -44,10 +59,5 @@ async def update_me(updates: UserUpdate, user: dict = Depends(get_current_user))
     if not data:
         raise HTTPException(status_code=422, detail="No fields to update")
 
-    result = (
-        supabase.table("users")
-        .update(data)
-        .eq("id", user["id"])
-        .execute()
-    )
+    result = supabase.table("users").update(data).eq("id", user["id"]).execute()
     return result.data[0] if result.data else {}

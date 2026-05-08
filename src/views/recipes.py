@@ -36,7 +36,9 @@ def _fmt_last_made(date_str: Optional[str]) -> Optional[str]:
 def _fmt_recipe(r: dict, user_profile: dict) -> dict:
     ingredients = [
         ri["ingredient_name"]
-        for ri in sorted(r.get("recipe_ingredients") or [], key=lambda x: x.get("sort_order", 0))
+        for ri in sorted(
+            r.get("recipe_ingredients") or [], key=lambda x: x.get("sort_order", 0)
+        )
     ]
     return {
         "id": r["id"],

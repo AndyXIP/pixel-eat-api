@@ -8,10 +8,10 @@ router = APIRouter(prefix="/friends", tags=["friends"])
 def _fmt(row: dict) -> dict:
     """Convert snake_case user row to camelCase for the frontend."""
     return {
-        "id":          row["id"],
+        "id": row["id"],
         "displayName": row.get("display_name") or "",
-        "username":    row.get("username") or "",
-        "avatarUrl":   row.get("avatar_url") or "",
+        "username": row.get("username") or "",
+        "avatarUrl": row.get("avatar_url") or "",
     }
 
 
@@ -53,14 +53,18 @@ async def search_users(q: str = "", user: dict = Depends(get_current_user)):
 async def add_friend(user_id: str, user: dict = Depends(get_current_user)):
     if user_id == user["id"]:
         raise HTTPException(status_code=400, detail="Cannot follow yourself")
-    supabase.table("follows").upsert({
-        "follower_id": user["id"],
-        "following_id": user_id,
-    }).execute()
+    supabase.table("follows").upsert(
+        {
+            "follower_id": user["id"],
+            "following_id": user_id,
+        }
+    ).execute()
     return {"ok": True}
 
 
 @router.delete("/{user_id}")
 async def remove_friend(user_id: str, user: dict = Depends(get_current_user)):
-    supabase.table("follows").delete().eq("follower_id", user["id"]).eq("following_id", user_id).execute()
+    supabase.table("follows").delete().eq("follower_id", user["id"]).eq(
+        "following_id", user_id
+    ).execute()
     return {"ok": True}

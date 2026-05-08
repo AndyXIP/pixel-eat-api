@@ -11,7 +11,9 @@ async def get_current_event(user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc).isoformat()
     result = (
         supabase.table("events")
-        .select("title, description, event_ingredients(label, image_key), event_featured_recipes(recipe_name)")
+        .select(
+            "title, description, event_ingredients(label, image_key), event_featured_recipes(recipe_name)"
+        )
         .lte("starts_at", now)
         .gte("ends_at", now)
         .limit(1)
@@ -31,8 +33,7 @@ async def get_current_event(user: dict = Depends(get_current_user)):
                 for ei in (event.get("event_ingredients") or [])
             ],
             "featuredRecipes": [
-                er["recipe_name"]
-                for er in (event.get("event_featured_recipes") or [])
+                er["recipe_name"] for er in (event.get("event_featured_recipes") or [])
             ],
         },
         "lanternProgress": {"filled": 0, "total": 10, "mealsUntilBadge": 10},
