@@ -1,6 +1,6 @@
 from fastapi import HTTPException, UploadFile, status
-from datetime import datetime, timedelta
-from typing import List
+from datetime import datetime, timedelta, timezone
+from typing import Any, List, cast
 from database import supabase
 from schemas.post import PostCreate
 from services import storage_service, badge_service
@@ -28,7 +28,7 @@ async def create_post(
     photo_url = await storage_service.upload_post_photo(photo, user["id"])
 
     # 4. Save post row
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     post_id = uuid.uuid4()
     post_row = {
         "id": str(post_id),
@@ -79,7 +79,8 @@ async def _validate_ingredients(ingredient_ids: List[uuid.UUID]) -> None:
         .execute()
     )
 
-    found_ids = {row["id"] for row in result.data}
+    rows = cast(list[dict[str, Any]], result.data)
+    found_ids = {row["id"] for row in rows}
     requested_ids = {str(i) for i in ingredient_ids}
 
     missing = requested_ids - found_ids
@@ -89,11 +90,11 @@ async def _validate_ingredients(ingredient_ids: List[uuid.UUID]) -> None:
             detail=f"Unknown ingredient IDs: {missing}",
         )
 
-    for row in result.data:
+    for row in rows:
         if row["tier"] == "always":
             continue
-        available_from = row.get("available_from")
-        available_until = row.get("available_until")
+        available_from = cast(str | None, row.get("available_from"))
+        available_until = cast(str | None, row.get("available_until"))
         if available_from and available_until:
             if not (available_from <= today <= available_until):
                 raise HTTPException(

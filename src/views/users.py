@@ -3,6 +3,8 @@ from dependencies import get_current_user
 from schemas.user import UserUpdate
 from services.storage_service import upload_post_photo
 from database import supabase
+from typing import Any, cast
+from postgrest import CountMethod
 import uuid
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -24,19 +26,23 @@ async def get_user(user_id: uuid.UUID, user: dict = Depends(get_current_user)):
 
     post_count = (
         supabase.table("posts")
-        .select("id", count="exact")
+        .select("id", count=CountMethod.exact)
         .eq("user_id", str(user_id))
         .execute()
     ).count or 0
 
     badge_count = (
         supabase.table("user_badges")
-        .select("id", count="exact")
+        .select("id", count=CountMethod.exact)
         .eq("user_id", str(user_id))
         .execute()
     ).count or 0
 
-    return {**result.data, "post_count": post_count, "badge_count": badge_count}
+    return {
+        **cast(dict[str, Any], result.data),
+        "post_count": post_count,
+        "badge_count": badge_count,
+    }
 
 
 @router.post("/me/avatar")
@@ -60,4 +66,5 @@ async def update_me(updates: UserUpdate, user: dict = Depends(get_current_user))
         raise HTTPException(status_code=422, detail="No fields to update")
 
     result = supabase.table("users").update(data).eq("id", user["id"]).execute()
-    return result.data[0] if result.data else {}
+    rows = cast(list[dict[str, Any]], result.data)
+    return rows[0] if rows else {}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from database import supabase
 from dependencies import get_current_user
 from datetime import datetime, timezone
+from typing import Any, cast
 
 router = APIRouter(prefix="/feed", tags=["feed"])
 
@@ -41,11 +42,11 @@ def _time_ago(dt_str: str) -> str:
         return ""
 
 
-def _fmt_post(p: dict) -> dict:
-    user = p.get("users") or {}
+def _fmt_post(p: dict[str, Any]) -> dict:
+    user = cast(dict[str, Any], p.get("users") or {})
     ingredient_names = [
-        pi["ingredients"]["name"]
-        for pi in (p.get("post_ingredients") or [])
+        cast(dict[str, Any], pi["ingredients"])["name"]
+        for pi in cast(list[dict[str, Any]], p.get("post_ingredients") or [])
         if pi.get("ingredients")
     ]
     return {
@@ -78,7 +79,9 @@ async def get_feed(user: dict = Depends(get_current_user)):
         .eq("follower_id", user["id"])
         .execute()
     )
-    following_ids = [f["following_id"] for f in follows.data] + [user["id"]]
+    following_ids = [
+        f["following_id"] for f in cast(list[dict[str, Any]], follows.data)
+    ] + [user["id"]]
 
     result = (
         supabase.table("posts")
@@ -90,4 +93,4 @@ async def get_feed(user: dict = Depends(get_current_user)):
         .limit(50)
         .execute()
     )
-    return [_fmt_post(p) for p in result.data]
+    return [_fmt_post(p) for p in cast(list[dict[str, Any]], result.data)]

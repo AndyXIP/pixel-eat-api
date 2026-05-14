@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import uuid
 
@@ -59,7 +59,7 @@ async def create_quick_post(data: dict, user: dict = Depends(get_current_user)):
     from schemas.post import QuickPostCreate
 
     body = QuickPostCreate(**data)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     post_id = str(uuid.uuid4())
     post_row = {
         "id": post_id,

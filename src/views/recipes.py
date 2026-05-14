@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Any, Optional, List, cast
 from datetime import datetime
 
 from database import supabase
@@ -33,11 +33,12 @@ def _fmt_last_made(date_str: Optional[str]) -> Optional[str]:
         return date_str
 
 
-def _fmt_recipe(r: dict, user_profile: dict) -> dict:
+def _fmt_recipe(r: dict[str, Any], user_profile: dict[str, Any]) -> dict:
     ingredients = [
         ri["ingredient_name"]
         for ri in sorted(
-            r.get("recipe_ingredients") or [], key=lambda x: x.get("sort_order", 0)
+            cast(list[dict[str, Any]], r.get("recipe_ingredients") or []),
+            key=lambda x: x.get("sort_order", 0),
         )
     ]
     return {
@@ -53,7 +54,7 @@ def _fmt_recipe(r: dict, user_profile: dict) -> dict:
     }
 
 
-def _get_user_profile(user_id: str) -> dict:
+def _get_user_profile(user_id: str) -> dict[str, Any]:
     result = (
         supabase.table("users")
         .select("username, avatar_url")
@@ -61,7 +62,7 @@ def _get_user_profile(user_id: str) -> dict:
         .single()
         .execute()
     )
-    return result.data or {}
+    return cast(dict[str, Any], result.data) if result.data else {}
 
 
 @router.get("")
@@ -74,7 +75,9 @@ async def get_recipes(user: dict = Depends(get_current_user)):
         .order("created_at", desc=True)
         .execute()
     )
-    return [_fmt_recipe(r, user_profile) for r in result.data]
+    return [
+        _fmt_recipe(r, user_profile) for r in cast(list[dict[str, Any]], result.data)
+    ]
 
 
 @router.post("", status_code=201)
@@ -88,7 +91,8 @@ async def create_recipe(body: RecipeCreate, user: dict = Depends(get_current_use
         "notes": body.notes,
     }
     result = supabase.table("recipes").insert(recipe_row).execute()
-    if not result.data:
+    rows = cast(list[dict[str, Any]], result.data)
+    if not rows:
         raise HTTPException(status_code=500, detail="Failed to create recipe")
 
     if body.ingredients:
@@ -99,7 +103,7 @@ async def create_recipe(body: RecipeCreate, user: dict = Depends(get_current_use
         supabase.table("recipe_ingredients").insert(ingredient_rows).execute()
 
     user_profile = _get_user_profile(user["id"])
-    recipe = result.data[0]
+    recipe = rows[0]
     recipe["recipe_ingredients"] = [
         {"ingredient_name": name, "sort_order": i}
         for i, name in enumerate(body.ingredients)
@@ -116,5 +120,5 @@ async def delete_recipe(recipe_id: str, user: dict = Depends(get_current_user)):
         .eq("user_id", user["id"])
         .execute()
     )
-    if not result.data:
+    if not cast(list[dict[str, Any]], result.data):
         raise HTTPException(status_code=404, detail="Recipe not found")

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from database import supabase
 from dependencies import get_current_user
 from datetime import datetime, timezone, timedelta
+from typing import Any, cast
 
 router = APIRouter(prefix="/diary", tags=["diary"])
 
@@ -36,7 +37,7 @@ def _parse_dt(dt_str: str) -> datetime:
     return dt
 
 
-def _day_streak(posts_data: list) -> int:
+def _day_streak(posts_data: list[dict[str, Any]]) -> int:
     """Count consecutive days ending today that have at least one post."""
     today = datetime.now(timezone.utc).date()
     days_with_posts = set()
@@ -66,11 +67,11 @@ async def get_dish_history(user: dict = Depends(get_current_user)):
         .execute()
     )
     dishes = []
-    for p in result.data:
+    for p in cast(list[dict[str, Any]], result.data):
         dt = _parse_dt(p["posted_at"])
         ingredient_names = [
-            pi["ingredients"]["name"]
-            for pi in (p.get("post_ingredients") or [])
+            cast(dict[str, Any], pi["ingredients"])["name"]
+            for pi in cast(list[dict[str, Any]], p.get("post_ingredients") or [])
             if pi.get("ingredients")
         ]
         dishes.append(
@@ -105,7 +106,7 @@ async def get_diary(user: dict = Depends(get_current_user)):
         .order("posted_at", desc=True)
         .execute()
     )
-    all_posts = all_posts_result.data
+    all_posts = cast(list[dict[str, Any]], all_posts_result.data)
 
     # Filter to this month (ascending for calendar)
     month_posts = sorted(
@@ -135,8 +136,8 @@ async def get_diary(user: dict = Depends(get_current_user)):
     dishes_this_week = []
     for p in week_posts[:6]:
         ingredient_names = [
-            pi["ingredients"]["name"]
-            for pi in (p.get("post_ingredients") or [])
+            cast(dict[str, Any], pi["ingredients"])["name"]
+            for pi in cast(list[dict[str, Any]], p.get("post_ingredients") or [])
             if pi.get("ingredients")
         ]
         dishes_this_week.append(
@@ -170,7 +171,7 @@ async def get_diary(user: dict = Depends(get_current_user)):
         .eq("user_id", user["id"])
         .execute()
     )
-    all_recipes = all_recipes_result.data
+    all_recipes = cast(list[dict[str, Any]], all_recipes_result.data)
     new_recipes_count = sum(
         1 for r in all_recipes if month_start <= _parse_dt(r["created_at"]) <= month_end
     )
@@ -186,7 +187,8 @@ async def get_diary(user: dict = Depends(get_current_user)):
         .limit(1)
         .execute()
     )
-    event = event_result.data[0] if event_result.data else None
+    events_data = cast(list[dict[str, Any]], event_result.data)
+    event = events_data[0] if events_data else None
 
     challenge_title = event["title"] if event else None
     challenge_detail = None
@@ -196,10 +198,15 @@ async def get_diary(user: dict = Depends(get_current_user)):
             "description": event.get("description") or "",
             "ingredients": [
                 {"label": ei["label"], "imageKey": ei["image_key"]}
-                for ei in (event.get("event_ingredients") or [])
+                for ei in cast(
+                    list[dict[str, Any]], event.get("event_ingredients") or []
+                )
             ],
             "featuredRecipes": [
-                er["recipe_name"] for er in (event.get("event_featured_recipes") or [])
+                er["recipe_name"]
+                for er in cast(
+                    list[dict[str, Any]], event.get("event_featured_recipes") or []
+                )
             ],
         }
 

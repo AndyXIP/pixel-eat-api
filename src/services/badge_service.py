@@ -1,5 +1,5 @@
-from datetime import date, datetime
-from typing import List
+from datetime import date, datetime, timezone
+from typing import Any, List, cast
 from database import supabase
 import uuid
 
@@ -32,13 +32,14 @@ async def _check_seasonal_badges(user_id: str, post_id: uuid.UUID) -> List[dict]
         .execute()
     )
 
+    rows = cast(list[dict[str, Any]], result.data)
     seasonal_ingredient_ids = set()
-    for row in result.data:
-        ing = row.get("ingredients")
+    for row in rows:
+        ing = cast(dict[str, Any], row.get("ingredients"))
         if not ing or ing.get("tier") == "always":
             continue
-        available_from = ing.get("available_from")
-        available_until = ing.get("available_until")
+        available_from = cast(str | None, ing.get("available_from"))
+        available_until = cast(str | None, ing.get("available_until"))
         if available_from and available_until:
             if (
                 date.fromisoformat(available_from)
@@ -57,10 +58,10 @@ async def _check_seasonal_badges(user_id: str, post_id: uuid.UUID) -> List[dict]
 
     already_earned = _get_already_earned_badge_ids(user_id)
 
-    for badge in badges_result.data:
+    for badge in cast(list[dict[str, Any]], badges_result.data):
         if badge["id"] in already_earned:
             continue
-        condition = badge.get("condition_value") or {}
+        condition = cast(dict[str, Any], badge.get("condition_value") or {})
         required_ingredient = condition.get("ingredient_id")
         if required_ingredient and required_ingredient in seasonal_ingredient_ids:
             earned.append(_award_badge(user_id, badge["id"], post_id))
@@ -80,7 +81,7 @@ async def _check_streak_badges(user_id: str, post_id: uuid.UUID) -> List[dict]:
         .execute()
     )
 
-    streak = _calculate_streak(posts_result.data)
+    streak = _calculate_streak(cast(list[dict[str, Any]], posts_result.data))
 
     badges_result = (
         supabase.table("badges").select("*").eq("condition_type", "streak").execute()
@@ -88,17 +89,19 @@ async def _check_streak_badges(user_id: str, post_id: uuid.UUID) -> List[dict]:
 
     already_earned = _get_already_earned_badge_ids(user_id)
 
-    for badge in badges_result.data:
+    for badge in cast(list[dict[str, Any]], badges_result.data):
         if badge["id"] in already_earned:
             continue
-        required_streak = (badge.get("condition_value") or {}).get("days", 0)
+        required_streak = (
+            cast(dict[str, Any], badge.get("condition_value") or {})
+        ).get("days", 0)
         if streak >= required_streak:
             earned.append(_award_badge(user_id, badge["id"], post_id))
 
     return earned
 
 
-def _calculate_streak(posts: List[dict]) -> int:
+def _calculate_streak(posts: list[dict[str, Any]]) -> int:
     if not posts:
         return 0
 
@@ -124,7 +127,7 @@ def _get_already_earned_badge_ids(user_id: str) -> set:
         .eq("user_id", user_id)
         .execute()
     )
-    return {row["badge_id"] for row in result.data}
+    return {row["badge_id"] for row in cast(list[dict[str, Any]], result.data)}
 
 
 def _award_badge(user_id: str, badge_id: str, post_id: uuid.UUID) -> dict:
@@ -132,7 +135,7 @@ def _award_badge(user_id: str, badge_id: str, post_id: uuid.UUID) -> dict:
         "user_id": user_id,
         "badge_id": badge_id,
         "post_id": str(post_id),
-        "earned_at": datetime.utcnow().isoformat(),
+        "earned_at": datetime.now(timezone.utc).isoformat(),
     }
     supabase.table("user_badges").insert(record).execute()
     return record

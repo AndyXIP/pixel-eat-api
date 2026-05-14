@@ -6,7 +6,8 @@ import uuid
 
 async def upload_post_photo(file: UploadFile, user_id: str) -> str:
     """Upload a post photo to Supabase Storage. Returns the public URL."""
-    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
+    filename = file.filename or ""
+    ext = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
     path = f"{user_id}/{uuid.uuid4()}.{ext}"
     contents = await file.read()
 

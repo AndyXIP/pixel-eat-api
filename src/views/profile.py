@@ -3,11 +3,12 @@ from database import supabase
 from dependencies import get_current_user
 from datetime import datetime, timezone, timedelta
 from collections import Counter
+from typing import Any, cast
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
-def _week_streak(posts_data: list) -> int:
+def _week_streak(posts_data: list[dict[str, Any]]) -> int:
     """Count consecutive weeks ending this week that have at least one post."""
     now = datetime.now(timezone.utc)
     week_start = now - timedelta(days=now.weekday())
@@ -44,7 +45,7 @@ async def get_my_profile(user: dict = Depends(get_current_user)):
     )
     if not user_result.data:
         raise HTTPException(status_code=404, detail="User not found")
-    profile = user_result.data
+    profile = cast(dict[str, Any], user_result.data)
 
     posts_result = (
         supabase.table("posts")
@@ -55,23 +56,23 @@ async def get_my_profile(user: dict = Depends(get_current_user)):
         .order("posted_at", desc=True)
         .execute()
     )
-    posts_data = posts_result.data
+    posts_data = cast(list[dict[str, Any]], posts_result.data)
 
     recipes_result = (
         supabase.table("recipes").select("id").eq("user_id", user["id"]).execute()
     )
-    recipes_count = len(recipes_result.data)
+    recipes_count = len(cast(list[dict[str, Any]], recipes_result.data))
 
     badges_result = (
         supabase.table("user_badges").select("id").eq("user_id", user["id"]).execute()
     )
-    badges_count = len(badges_result.data)
+    badges_count = len(cast(list[dict[str, Any]], badges_result.data))
 
     ingredient_counter: Counter = Counter()
     for p in posts_data:
-        for pi in p.get("post_ingredients") or []:
+        for pi in cast(list[dict[str, Any]], p.get("post_ingredients") or []):
             if pi.get("ingredients"):
-                ingredient_counter[pi["ingredients"]["name"]] += 1
+                ingredient_counter[cast(dict[str, Any], pi["ingredients"])["name"]] += 1
     total_uses = sum(ingredient_counter.values()) or 1
     top_ingredients = [
         {"label": name, "pct": round(count / total_uses, 2)}
@@ -81,8 +82,8 @@ async def get_my_profile(user: dict = Depends(get_current_user)):
     pinned = []
     for p in posts_data[:3]:
         ingredient_names = [
-            pi["ingredients"]["name"]
-            for pi in (p.get("post_ingredients") or [])
+            cast(dict[str, Any], pi["ingredients"])["name"]
+            for pi in cast(list[dict[str, Any]], p.get("post_ingredients") or [])
             if pi.get("ingredients")
         ]
         pinned.append(

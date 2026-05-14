@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from database import supabase
 from dependencies import get_current_user
+from typing import Any, cast
 
 router = APIRouter(prefix="/friends", tags=["friends"])
 
 
-def _fmt(row: dict) -> dict:
+def _fmt(row: dict[str, Any]) -> dict:
     """Convert snake_case user row to camelCase for the frontend."""
     return {
         "id": row["id"],
@@ -23,7 +24,7 @@ async def get_friends(user: dict = Depends(get_current_user)):
         .eq("follower_id", user["id"])
         .execute()
     )
-    ids = [f["following_id"] for f in follows.data]
+    ids = [f["following_id"] for f in cast(list[dict[str, Any]], follows.data)]
     if not ids:
         return []
     result = (
@@ -32,7 +33,7 @@ async def get_friends(user: dict = Depends(get_current_user)):
         .in_("id", ids)
         .execute()
     )
-    return [_fmt(u) for u in result.data]
+    return [_fmt(u) for u in cast(list[dict[str, Any]], result.data)]
 
 
 @router.get("/search")
@@ -46,7 +47,7 @@ async def search_users(q: str = "", user: dict = Depends(get_current_user)):
         result = base.or_(f"username.ilike.%{q}%,display_name.ilike.%{q}%").execute()
     else:
         result = base.limit(20).execute()
-    return [_fmt(u) for u in result.data]
+    return [_fmt(u) for u in cast(list[dict[str, Any]], result.data)]
 
 
 @router.post("/{user_id}")

@@ -12,7 +12,7 @@ async def get_current_user(
 ) -> dict:
     try:
         response = supabase.auth.get_user(credentials.credentials)
-        if not response.user:
+        if response is None or not response.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
             )
