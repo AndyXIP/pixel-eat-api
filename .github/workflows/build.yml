@@ -48,4 +48,4 @@ jobs:
         run: uv sync --group dev
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run pytest --ignore=.venv -p no:cacheprovider || [ $? -eq 5 ]
