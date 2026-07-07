@@ -1,6 +1,7 @@
-ARG PYTHON_VERSION=3.14.6
+ARG PYTHON_VERSION
+ARG UV_VERSION
+
 FROM python:${PYTHON_VERSION}-slim AS build
-ARG UV_VERSION=0.11.27
 COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /usr/local/bin/uv
 
 WORKDIR /app
