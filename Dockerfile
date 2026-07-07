@@ -1,4 +1,5 @@
-FROM python:3.14-slim AS build
+ARG PYTHON_VERSION=3.14.6
+FROM python:${PYTHON_VERSION}-slim AS build
 ARG UV_VERSION=0.11.27
 COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /usr/local/bin/uv
 
@@ -6,12 +7,13 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
-FROM python:3.14-slim AS final
+FROM python:${PYTHON_VERSION}-slim AS final
 RUN useradd --create-home app
 WORKDIR /app
 
 COPY --from=build /app/.venv ./.venv
 COPY src/ ./src/
+COPY assets/ ./assets/
 
 RUN chown -R app:app /app
 USER app
