@@ -1,6 +1,6 @@
 [tools]
 python = "3.14"
-uv = "latest"
+uv = "0.11.27"
 
 [settings]
 python.uv_venv_auto = "create|source"
