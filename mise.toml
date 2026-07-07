@@ -1,6 +1,0 @@
-[tools]
-python = "3.14"
-uv = "latest"
-
-[hooks]
-enter = "uv sync --group dev -q && uv run pre-commit install -q"
